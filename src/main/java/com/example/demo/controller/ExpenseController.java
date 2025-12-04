@@ -1,0 +1,52 @@
+package com.example.demo.controller;
+
+import com.example.demo.dto.ExpenseRequest;
+import com.example.demo.dto.ExpenseResponse;
+import com.example.demo.dto.MonthlyCategoryTotalResponse;
+import com.example.demo.service.ExpenseService;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api")
+public class ExpenseController {
+
+    private final ExpenseService expenseService;
+
+    public ExpenseController(ExpenseService expenseService) {
+        this.expenseService = expenseService;
+    }
+
+    @PostMapping("/expenses")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ExpenseResponse createExpense(@Valid @RequestBody ExpenseRequest request) {
+        return expenseService.createExpense(request);
+    }
+
+    @GetMapping("/expenses/recent")
+    public List<ExpenseResponse> recentExpenses(@RequestParam(defaultValue = "10") int limit) {
+        return expenseService.listRecentExpenses(limit);
+    }
+
+    @GetMapping("/categories/{categoryId}/expenses/recent")
+    public List<ExpenseResponse> recentExpensesByCategory(@PathVariable UUID categoryId,
+                                                          @RequestParam(defaultValue = "10") int limit) {
+        return expenseService.listRecentExpensesByCategory(categoryId, limit);
+    }
+
+    @GetMapping("/summary/monthly")
+    public List<MonthlyCategoryTotalResponse> monthlyTotals(@RequestParam int year, @RequestParam int month) {
+        return expenseService.calculateMonthlyTotals(year, month);
+    }
+}
