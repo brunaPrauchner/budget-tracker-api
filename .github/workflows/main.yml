@@ -23,3 +23,6 @@ jobs:
 
       - name: Build and test
         run: mvn -B clean test
+        env:
+          CALENDARIFIC_API_KEY: ${{ secrets.CALENDARIFIC_API_KEY }}
+
