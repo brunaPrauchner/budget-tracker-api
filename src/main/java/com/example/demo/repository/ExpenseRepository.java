@@ -19,6 +19,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, UUID> {
 
     Page<Expense> findByCategoryOrderBySpentAtDesc(Category category, Pageable pageable);
 
+    boolean existsByCategory(Category category);
+
     @Query("""
             select e.category.id as categoryId,
                    e.category.name as categoryName,

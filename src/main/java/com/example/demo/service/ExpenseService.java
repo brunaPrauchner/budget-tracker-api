@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.dto.ExpenseRequest;
 import com.example.demo.dto.ExpenseResponse;
 import com.example.demo.dto.MonthlyCategoryTotalResponse;
+import com.example.demo.holiday.HolidayService;
 import com.example.demo.model.Category;
 import com.example.demo.model.Expense;
 import com.example.demo.repository.ExpenseRepository;
@@ -29,10 +30,12 @@ public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
     private final CategoryService categoryService;
+    private final HolidayService holidayService;
 
-    public ExpenseService(ExpenseRepository expenseRepository, CategoryService categoryService) {
+    public ExpenseService(ExpenseRepository expenseRepository, CategoryService categoryService, HolidayService holidayService) {
         this.expenseRepository = expenseRepository;
         this.categoryService = categoryService;
+        this.holidayService = holidayService;
     }
 
     public ExpenseResponse createExpense(ExpenseRequest request) {
@@ -45,6 +48,15 @@ public class ExpenseService {
         expense.setCurrency(request.getCurrency().toUpperCase());
         expense.setSpentAt(request.getSpentAt());
         expense.setLocation(request.getLocation());
+
+        holidayService.findHoliday(request.getSpentAt().toLocalDate())
+                .ifPresentOrElse(name -> {
+                    expense.setHoliday(true);
+                    expense.setHolidayName(name);
+                }, () -> {
+                    expense.setHoliday(false);
+                    expense.setHolidayName(null);
+                });
 
         Expense saved = expenseRepository.save(expense);
         return toResponse(saved);
@@ -83,6 +95,12 @@ public class ExpenseService {
         }).toList();
     }
 
+    public void deleteExpense(UUID id) {
+        Expense expense = expenseRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found"));
+        expenseRepository.delete(expense);
+    }
+
     private ExpenseResponse toResponse(Expense expense) {
         ExpenseResponse response = new ExpenseResponse();
         response.setId(expense.getId());
@@ -93,6 +111,8 @@ public class ExpenseService {
         response.setCurrency(expense.getCurrency());
         response.setSpentAt(expense.getSpentAt());
         response.setLocation(expense.getLocation());
+        response.setHoliday(expense.isHoliday());
+        response.setHolidayName(expense.getHolidayName());
         response.setCreatedAt(expense.getCreatedAt());
         response.setUpdatedAt(expense.getUpdatedAt());
         return response;

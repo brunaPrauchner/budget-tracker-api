@@ -26,3 +26,12 @@ Timestamps use OffsetDateTime (ISO 8601 with offset). Amounts are BigDecimal wit
 ## Docs
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+
+## Holidays (Calendarific)
+When creating an expense, the service looks up `spentAt` in Calendarific and annotates the expense with `holiday` (true/false) and `holidayName` when applicable.
+Configure your key in `src/main/resources/application.properties`:
+```
+calendarific.api-key=YOUR_KEY
+calendarific.country=US
+calendarific.base-url=https://calendarific.com/api/v2
+```

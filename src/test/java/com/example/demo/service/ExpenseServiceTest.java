@@ -4,6 +4,7 @@ import com.example.demo.dto.CategoryRequest;
 import com.example.demo.dto.ExpenseRequest;
 import com.example.demo.dto.ExpenseResponse;
 import com.example.demo.dto.MonthlyCategoryTotalResponse;
+import com.example.demo.holiday.HolidayService;
 import com.example.demo.model.Category;
 import com.example.demo.repository.CategoryRepository;
 import com.example.demo.repository.ExpenseRepository;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -20,6 +22,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @Transactional
@@ -37,6 +41,9 @@ class ExpenseServiceTest {
     @Autowired
     private ExpenseRepository expenseRepository;
 
+    @MockBean
+    private HolidayService holidayService;
+
     private Category food;
     private Category transport;
 
@@ -44,6 +51,7 @@ class ExpenseServiceTest {
     void setup() {
         expenseRepository.deleteAll();
         categoryRepository.deleteAll();
+        when(holidayService.findHoliday(any())).thenReturn(java.util.Optional.empty());
 
         food = createCategory("Food Out");
         transport = createCategory("Transport");
@@ -68,6 +76,8 @@ class ExpenseServiceTest {
         assertEquals("USD", response.getCurrency());
         assertEquals(request.getSpentAt(), response.getSpentAt());
         assertEquals("Downtown Market", response.getLocation());
+        assertFalse(response.isHoliday());
+        assertNull(response.getHolidayName());
     }
 
     @Test
