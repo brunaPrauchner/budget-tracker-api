@@ -37,6 +37,12 @@ public class Expense {
     @Column(length = 255)
     private String location;
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean holiday;
+
+    @Column(length = 255)
+    private String holidayName;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
@@ -108,6 +114,22 @@ public class Expense {
 
     public void setLocation(String location) {
         this.location = location;
+    }
+
+    public boolean isHoliday() {
+        return holiday;
+    }
+
+    public void setHoliday(boolean holiday) {
+        this.holiday = holiday;
+    }
+
+    public String getHolidayName() {
+        return holidayName;
+    }
+
+    public void setHolidayName(String holidayName) {
+        this.holidayName = holidayName;
     }
 
     public Category getCategory() {

@@ -15,6 +15,8 @@ public class ExpenseResponse {
     private String currency;
     private OffsetDateTime spentAt;
     private String location;
+    private boolean holiday;
+    private String holidayName;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -80,6 +82,22 @@ public class ExpenseResponse {
 
     public void setLocation(String location) {
         this.location = location;
+    }
+
+    public boolean isHoliday() {
+        return holiday;
+    }
+
+    public void setHoliday(boolean holiday) {
+        this.holiday = holiday;
+    }
+
+    public String getHolidayName() {
+        return holidayName;
+    }
+
+    public void setHolidayName(String holidayName) {
+        this.holidayName = holidayName;
     }
 
     public Instant getCreatedAt() {
