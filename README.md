@@ -22,3 +22,7 @@ The default profile uses an in-memory H2 database (PostgreSQL mode) and exposes 
 - `GET /api/summary/monthly?year=2024&month=12` - totals per category for the given month
 
 Timestamps use OffsetDateTime (ISO 8601 with offset). Amounts are BigDecimal with a 3-letter ISO code.
+
+## Docs
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
