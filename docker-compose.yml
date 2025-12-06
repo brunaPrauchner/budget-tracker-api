@@ -1,5 +1,19 @@
 version: "3.9"
 services:
+  app:
+    build: .
+    container_name: budget-tracker-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/budgettracker
+      SPRING_DATASOURCE_USERNAME: budget_user
+      SPRING_DATASOURCE_PASSWORD: budget_pass
+      SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_TIME_ZONE: UTC
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: postgres:16
     container_name: budget-tracker-db
