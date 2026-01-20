@@ -30,3 +30,9 @@ Thumbs.db
 # Misc
 .mtj.tmp/
 *.ctxt
+
+# Environment files
+.env
+
+launch.json
+

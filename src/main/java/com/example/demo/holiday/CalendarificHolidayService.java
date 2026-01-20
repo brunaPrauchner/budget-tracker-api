@@ -54,7 +54,7 @@ public class CalendarificHolidayService implements HolidayService {
         return Optional.empty();
     }
 
-    // Response mappings
+    // Response mappings: used to deserialize the Calendarific JSON response
     public static class CalendarificResponse {
         public CalendarificData response;
     }
