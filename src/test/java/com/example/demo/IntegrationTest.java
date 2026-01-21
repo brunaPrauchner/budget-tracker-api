@@ -154,7 +154,7 @@ class IntegrationTest {
         ResponseEntity<String> delResp = restTemplate.exchange(
                 "/api/expenses/" + expenseId,
                 HttpMethod.DELETE,
-                HttpEntity.EMPTY,
+                HttpEntity.EMPTY, // exchange requires an entity argument even when it’s empty
                 String.class);
         assertEquals(HttpStatus.NO_CONTENT, delResp.getStatusCode(), () -> "Delete body: " + delResp.getBody());
 
@@ -165,6 +165,126 @@ class IntegrationTest {
                 HttpEntity.EMPTY,
                 new ParameterizedTypeReference<List<ExpenseDto>>() {});
         assertTrue(recent.getBody().stream().noneMatch(e -> e.id.equals(expenseId)));
+    }
+
+    @Test
+    void listCategories_returnsCreatedCategory() {
+        String name = "ListCat-" + UUID.randomUUID();
+        restTemplate.postForEntity(
+                "/api/categories",
+                Map.of("name", name, "monthlyBudgetLimit", 120),
+                CategoryDto.class);
+
+        ResponseEntity<List<CategoryDto>> resp = restTemplate.exchange(
+                "/api/categories",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<List<CategoryDto>>() {});
+
+        assertEquals(HttpStatus.OK, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertTrue(resp.getBody().stream().anyMatch(c -> name.equals(c.name) && c.monthlyBudgetLimit.intValue() == 120));
+    }
+
+    @Test
+    void deleteCategory_succeedsWhenNoExpenses() {
+        ResponseEntity<CategoryDto> catResp = restTemplate.postForEntity(
+                "/api/categories",
+                Map.of("name", "DeleteCat-" + UUID.randomUUID(), "monthlyBudgetLimit", 80),
+                CategoryDto.class);
+        UUID categoryId = catResp.getBody().id;
+
+        ResponseEntity<String> delResp = restTemplate.exchange(
+                "/api/categories/" + categoryId,
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                String.class);
+
+        assertEquals(HttpStatus.NO_CONTENT, delResp.getStatusCode());
+
+        ResponseEntity<List<CategoryDto>> listResp = restTemplate.exchange(
+                "/api/categories",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<List<CategoryDto>>() {});
+        assertTrue(listResp.getBody().stream().noneMatch(c -> categoryId.equals(c.id)));
+    }
+
+    @Test
+    void deleteCategory_withExpenses_returnsConflict() {
+        ResponseEntity<CategoryDto> catResp = restTemplate.postForEntity(
+                "/api/categories",
+                Map.of("name", "HasExpense-" + UUID.randomUUID(), "monthlyBudgetLimit", 200),
+                CategoryDto.class);
+        UUID categoryId = catResp.getBody().id;
+
+        // create expense to trigger conflict
+        restTemplate.postForEntity(
+                "/api/expenses",
+                Map.of(
+                        "categoryId", categoryId,
+                        "name", "Meal",
+                        "amount", 15.00,
+                        "currency", "USD",
+                        "spentAt", OffsetDateTime.now().withOffsetSameInstant(ZoneOffset.UTC).toString(),
+                        "location", "Cafe"
+                ),
+                ExpenseDto.class);
+
+        ResponseEntity<Map> delResp = restTemplate.exchange(
+                "/api/categories/" + categoryId,
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                Map.class);
+
+        assertEquals(HttpStatus.CONFLICT, delResp.getStatusCode());
+        assertNotNull(delResp.getBody());
+        assertEquals("Category has expenses and cannot be deleted", delResp.getBody().get("message"));
+    }
+
+    @Test
+    void createExpense_validationErrors_returnsBadRequest() {
+        ResponseEntity<Map> resp = restTemplate.postForEntity(
+                "/api/expenses",
+                Map.of(
+                        "name", "Invalid",
+                        "amount", -5,
+                        "currency", "us"
+                ),
+                Map.class);
+
+        assertEquals(HttpStatus.BAD_REQUEST, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertEquals(400, resp.getBody().get("status"));
+        assertEquals("Validation failed", resp.getBody().get("message"));
+    }
+
+    @Test
+    void listRecentExpensesByCategory_unknownCategory_returnsNotFound() {
+        UUID unknown = UUID.randomUUID();
+        ResponseEntity<Map> resp = restTemplate.exchange(
+                "/api/categories/" + unknown + "/expenses/recent",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                Map.class);
+
+        assertEquals(HttpStatus.NOT_FOUND, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertEquals("Category not found", resp.getBody().get("message"));
+    }
+
+    @Test
+    void deleteExpense_unknownId_returnsNotFound() {
+        UUID unknown = UUID.randomUUID();
+        ResponseEntity<Map> resp = restTemplate.exchange(
+                "/api/expenses/" + unknown,
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                Map.class);
+
+        assertEquals(HttpStatus.NOT_FOUND, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertEquals("Expense not found", resp.getBody().get("message"));
     }
 
     // Simple DTOs for deserialization

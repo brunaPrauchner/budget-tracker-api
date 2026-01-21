@@ -35,12 +35,15 @@ class CategoryServiceTest {
 
     @Test
     void createCategory_succeeds() {
+        //Arrange
         CategoryRequest request = new CategoryRequest();
         request.setName("Groceries" + System.nanoTime());
         request.setMonthlyBudgetLimit(new BigDecimal("150.00"));
 
+        //Act
         CategoryResponse response = categoryService.createCategory(request);
 
+        //Assert
         assertNotNull(response.getId());
         assertEquals(request.getName(), response.getName());
         assertEquals(request.getMonthlyBudgetLimit(), response.getMonthlyBudgetLimit());
@@ -94,6 +97,7 @@ class CategoryServiceTest {
 
     @Test
     void deleteCategory_succeedsWhenEmpty() {
+        //category with no expenses
         CategoryResponse created = categoryService.createCategory(requestWithName("DeleteEmpty"));
 
         categoryService.deleteCategory(created.getId());
@@ -111,7 +115,7 @@ class CategoryServiceTest {
     @Test
     void deleteCategory_withExpenses_throwsConflict() {
         Category category = categoryRepository.save(toCategory("WithExpense"));
-        expenseRepository.save(toExpense(category));
+        expenseRepository.save(toExpense(category)); //category with expenses
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> categoryService.deleteCategory(category.getId()));
         assertEquals(409, ex.getStatusCode().value());

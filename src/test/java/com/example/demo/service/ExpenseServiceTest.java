@@ -11,9 +11,10 @@ import com.example.demo.repository.ExpenseRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.annotation.Import;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -25,8 +26,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-@SpringBootTest
-@Transactional
+@DataJpaTest
+@Import({ExpenseService.class, CategoryService.class})
 class ExpenseServiceTest {
 
     @Autowired
@@ -59,6 +60,7 @@ class ExpenseServiceTest {
 
     @Test
     void createExpense_persistsWithLocation() {
+        //Arrange
         ExpenseRequest request = new ExpenseRequest();
         request.setCategoryId(food.getId());
         request.setName("Sushi");
@@ -67,8 +69,10 @@ class ExpenseServiceTest {
         request.setSpentAt(OffsetDateTime.of(2025, 1, 3, 18, 0, 0, 0, ZoneOffset.ofHours(-5)));
         request.setLocation("Downtown Market");
 
+        //Act
         ExpenseResponse response = expenseService.createExpense(request);
 
+        //Assert
         assertNotNull(response.getId());
         assertEquals(food.getId(), response.getCategoryId());
         assertEquals("Sushi", response.getName());
@@ -81,6 +85,23 @@ class ExpenseServiceTest {
     }
 
     @Test
+    void createExpense_setsHolidayFieldsWhenHolidayFound() {
+        when(holidayService.findHoliday(any())).thenReturn(java.util.Optional.of("Test Holiday"));
+        ExpenseRequest request = new ExpenseRequest();
+        request.setCategoryId(food.getId());
+        request.setName("Holiday Meal");
+        request.setAmount(new BigDecimal("25.00"));
+        request.setCurrency("usd");
+        request.setSpentAt(OffsetDateTime.of(2025, 12, 25, 12, 0, 0, 0, ZoneOffset.UTC));
+
+        ExpenseResponse response = expenseService.createExpense(request);
+
+        assertTrue(response.isHoliday());
+        assertEquals("Test Holiday", response.getHolidayName());
+        assertEquals("USD", response.getCurrency());
+    }
+
+    @Test
     void listRecentExpenses_respectsLimit() {
         createExpense(food.getId(), "A", new BigDecimal("5.00"), OffsetDateTime.now());
         createExpense(food.getId(), "B", new BigDecimal("6.00"), OffsetDateTime.now().plusMinutes(1));
@@ -90,6 +111,26 @@ class ExpenseServiceTest {
         assertEquals(2, responses.size());
         assertEquals("C", responses.get(0).getName());
         assertEquals("B", responses.get(1).getName());
+    }
+
+    @Test
+    void listRecentExpensesByCategory_filtersAndOrders() {
+        createExpense(food.getId(), "Food-A", new BigDecimal("5.00"), OffsetDateTime.now());
+        createExpense(transport.getId(), "Bus-A", new BigDecimal("3.00"), OffsetDateTime.now().plusMinutes(1));
+        createExpense(transport.getId(), "Bus-B", new BigDecimal("4.00"), OffsetDateTime.now().plusMinutes(2));
+
+        List<ExpenseResponse> responses = expenseService.listRecentExpensesByCategory(transport.getId(), 1);
+
+        assertEquals(1, responses.size());
+        assertEquals("Bus-B", responses.get(0).getName());
+        assertEquals(transport.getId(), responses.get(0).getCategoryId());
+    }
+
+    @Test
+    void listRecentExpensesByCategory_unknownCategory_throwsNotFound() {
+        UUID unknown = UUID.randomUUID();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> expenseService.listRecentExpensesByCategory(unknown, 5));
+        assertEquals(404, ex.getStatusCode().value());
     }
 
     @Test
@@ -107,6 +148,36 @@ class ExpenseServiceTest {
         assertEquals(2, totals.size());
         assertEquals(new BigDecimal("32.00"), totals.stream().filter(t -> t.getCategoryId().equals(food.getId())).findFirst().orElseThrow().getTotal());
         assertEquals(new BigDecimal("5.00"), totals.stream().filter(t -> t.getCategoryId().equals(transport.getId())).findFirst().orElseThrow().getTotal());
+    }
+
+    @Test
+    void monthlyTotals_invalidMonth_throwsBadRequest() {
+        ResponseStatusException tooLow = assertThrows(ResponseStatusException.class, () -> expenseService.calculateMonthlyTotals(2025, 0));
+        ResponseStatusException tooHigh = assertThrows(ResponseStatusException.class, () -> expenseService.calculateMonthlyTotals(2025, 13));
+        assertEquals(400, tooLow.getStatusCode().value());
+        assertEquals(400, tooHigh.getStatusCode().value());
+    }
+
+    @Test
+    void monthlyTotals_noExpenses_returnsEmptyList() {
+        List<MonthlyCategoryTotalResponse> totals = expenseService.calculateMonthlyTotals(2030, 1);
+        assertTrue(totals.isEmpty());
+    }
+
+    @Test
+    void deleteExpense_removesExisting() {
+        ExpenseResponse expense = createExpense(food.getId(), "Temp", new BigDecimal("8.00"), OffsetDateTime.now());
+
+        expenseService.deleteExpense(expense.getId());
+
+        assertFalse(expenseRepository.findById(expense.getId()).isPresent());
+    }
+
+    @Test
+    void deleteExpense_unknownId_throwsNotFound() {
+        UUID unknown = UUID.randomUUID();
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> expenseService.deleteExpense(unknown));
+        assertEquals(404, ex.getStatusCode().value());
     }
 
     private Category createCategory(String name) {
