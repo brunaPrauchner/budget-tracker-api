@@ -7,12 +7,14 @@ import com.example.demo.repository.CategoryRepository;
 import com.example.demo.repository.ExpenseRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@Transactional(readOnly = true) // default for the class
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
@@ -23,6 +25,7 @@ public class CategoryService {
         this.expenseRepository = expenseRepository;
     }
 
+    @Transactional // overrides readOnly=true
     public CategoryResponse createCategory(CategoryRequest request) {
         if (categoryRepository.existsByNameIgnoreCase(request.getName())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Category name already exists");
@@ -48,6 +51,7 @@ public class CategoryService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
     }
 
+    @Transactional
     public void deleteCategory(UUID id) {
         Category category = getCategory(id);
         if (expenseRepository.existsByCategory(category)) {
