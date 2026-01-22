@@ -9,6 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.context.annotation.Import;
+import com.example.demo.config.TestSecurityConfig;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -28,6 +31,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test")
+@Import(TestSecurityConfig.class)
 class IntegrationTest {
 
     @Autowired
@@ -120,10 +125,11 @@ class IntegrationTest {
                 CategoryDto.class);
         assertEquals(HttpStatus.CREATED, first.getStatusCode());
 
-        ResponseEntity<Map> dup = restTemplate.postForEntity(
+        ResponseEntity<Map<String, Object>> dup = restTemplate.exchange(
                 "/api/categories",
-                Map.of("name", name, "monthlyBudgetLimit", 50),
-                Map.class);
+                HttpMethod.POST,
+                new HttpEntity<>(Map.of("name", name, "monthlyBudgetLimit", 50)),
+                new ParameterizedTypeReference<Map<String, Object>>() {});
         assertEquals(HttpStatus.CONFLICT, dup.getStatusCode());
         assertNotNull(dup.getBody());
         assertEquals("Category name already exists", dup.getBody().get("message"));
@@ -233,11 +239,11 @@ class IntegrationTest {
                 ),
                 ExpenseDto.class);
 
-        ResponseEntity<Map> delResp = restTemplate.exchange(
+        ResponseEntity<Map<String, Object>> delResp = restTemplate.exchange(
                 "/api/categories/" + categoryId,
                 HttpMethod.DELETE,
                 HttpEntity.EMPTY,
-                Map.class);
+                new ParameterizedTypeReference<Map<String, Object>>() {});
 
         assertEquals(HttpStatus.CONFLICT, delResp.getStatusCode());
         assertNotNull(delResp.getBody());
@@ -246,14 +252,15 @@ class IntegrationTest {
 
     @Test
     void createExpense_validationErrors_returnsBadRequest() {
-        ResponseEntity<Map> resp = restTemplate.postForEntity(
+        ResponseEntity<Map<String, Object>> resp = restTemplate.exchange(
                 "/api/expenses",
-                Map.of(
+                HttpMethod.POST,
+                new HttpEntity<>(Map.of(
                         "name", "Invalid",
                         "amount", -5,
                         "currency", "us"
-                ),
-                Map.class);
+                )),
+                new ParameterizedTypeReference<Map<String, Object>>() {});
 
         assertEquals(HttpStatus.BAD_REQUEST, resp.getStatusCode());
         assertNotNull(resp.getBody());
@@ -264,11 +271,11 @@ class IntegrationTest {
     @Test
     void listRecentExpensesByCategory_unknownCategory_returnsNotFound() {
         UUID unknown = UUID.randomUUID();
-        ResponseEntity<Map> resp = restTemplate.exchange(
+        ResponseEntity<Map<String, Object>> resp = restTemplate.exchange(
                 "/api/categories/" + unknown + "/expenses/recent",
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
-                Map.class);
+                new ParameterizedTypeReference<Map<String, Object>>() {});
 
         assertEquals(HttpStatus.NOT_FOUND, resp.getStatusCode());
         assertNotNull(resp.getBody());
@@ -278,11 +285,11 @@ class IntegrationTest {
     @Test
     void deleteExpense_unknownId_returnsNotFound() {
         UUID unknown = UUID.randomUUID();
-        ResponseEntity<Map> resp = restTemplate.exchange(
+        ResponseEntity<Map<String, Object>> resp = restTemplate.exchange(
                 "/api/expenses/" + unknown,
                 HttpMethod.DELETE,
                 HttpEntity.EMPTY,
-                Map.class);
+                new ParameterizedTypeReference<Map<String, Object>>() {});
 
         assertEquals(HttpStatus.NOT_FOUND, resp.getStatusCode());
         assertNotNull(resp.getBody());
@@ -394,11 +401,11 @@ class IntegrationTest {
     void updateCategory_unknownId_putReturnsNotFound() {
         UUID unknown = UUID.randomUUID();
 
-        ResponseEntity<Map> resp = restTemplate.exchange(
+        ResponseEntity<Map<String, Object>> resp = restTemplate.exchange(
                 "/api/categories/" + unknown,
                 HttpMethod.PUT,
                 new HttpEntity<>(Map.of("name", "Nope", "monthlyBudgetLimit", 10)),
-                Map.class);
+                new ParameterizedTypeReference<Map<String, Object>>() {});
 
         assertEquals(HttpStatus.NOT_FOUND, resp.getStatusCode());
         assertNotNull(resp.getBody());
@@ -409,11 +416,11 @@ class IntegrationTest {
     void updateExpense_unknownId_patchReturnsNotFound() {
         UUID unknown = UUID.randomUUID();
 
-        ResponseEntity<Map> resp = restTemplate.exchange(
+        ResponseEntity<Map<String, Object>> resp = restTemplate.exchange(
                 "/api/expenses/" + unknown,
                 HttpMethod.PATCH,
                 new HttpEntity<>(Map.of("location", "Nowhere")),
-                Map.class);
+                new ParameterizedTypeReference<Map<String, Object>>() {});
 
         assertEquals(HttpStatus.NOT_FOUND, resp.getStatusCode());
         assertNotNull(resp.getBody());

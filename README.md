@@ -13,6 +13,13 @@ mvn spring-boot:run
 ```
 The default profile uses an in-memory H2 database (PostgreSQL mode) and exposes the H2 console at `/h2-console`.
 
+## Auth
+- JWT, stateless. Create a user with `POST /auth/register` body `{"username": "...", "password": "..."}`.
+- Get a token via `POST /auth/login` with your credentials.
+- Send `Authorization: Bearer <token>` on all `/api/**` requests.
+- Set the signing key and expiry with `jwt.*` properties.
+- Swagger UI: open `/swagger-ui.html`, click "Authorize", and paste `Bearer <token>` (scheme preconfigured).
+
 ## API
 - Categories
   - `POST /api/categories` - create `{ "name": "Food Out", "monthlyBudgetLimit": 250.00 }`
