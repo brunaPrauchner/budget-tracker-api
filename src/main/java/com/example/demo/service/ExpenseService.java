@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.dto.ExpenseRequest;
 import com.example.demo.dto.ExpenseResponse;
 import com.example.demo.dto.MonthlyCategoryTotalResponse;
+import com.example.demo.dto.ExpensePatchRequest;
 import com.example.demo.holiday.HolidayService;
 import com.example.demo.model.Category;
 import com.example.demo.model.Expense;
@@ -51,17 +52,58 @@ public class ExpenseService {
         expense.setSpentAt(request.getSpentAt());
         expense.setLocation(request.getLocation());
 
-        holidayService.findHoliday(request.getSpentAt().toLocalDate())
-                .ifPresentOrElse(name -> {
-                    expense.setHoliday(true);
-                    expense.setHolidayName(name);
-                }, () -> {
-                    expense.setHoliday(false);
-                    expense.setHolidayName(null);
-                });
+        applyHoliday(expense);
 
-        Expense saved = expenseRepository.save(expense);
-        return toResponse(saved);
+        return toResponse(expenseRepository.save(expense));
+    }
+
+    @Transactional
+    public ExpenseResponse updateExpense(UUID id, ExpenseRequest request) {
+        Expense expense = expenseRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found"));
+        Category category = categoryService.getCategory(request.getCategoryId());
+
+        expense.setCategory(category);
+        expense.setName(request.getName());
+        expense.setAmount(request.getAmount());
+        expense.setCurrency(request.getCurrency().toUpperCase());
+        expense.setSpentAt(request.getSpentAt());
+        expense.setLocation(request.getLocation());
+
+        applyHoliday(expense);
+        return toResponse(expenseRepository.save(expense));
+    }
+
+    @Transactional
+    public ExpenseResponse patchExpense(UUID id, ExpensePatchRequest request) {
+        if (request.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No fields to update");
+        }
+        Expense expense = expenseRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Expense not found"));
+
+        if (request.getCategoryId() != null) {
+            Category category = categoryService.getCategory(request.getCategoryId());
+            expense.setCategory(category);
+        }
+        if (request.getName() != null) {
+            expense.setName(request.getName());
+        }
+        if (request.getAmount() != null) {
+            expense.setAmount(request.getAmount());
+        }
+        if (request.getCurrency() != null) {
+            expense.setCurrency(request.getCurrency().toUpperCase());
+        }
+        if (request.getSpentAt() != null) {
+            expense.setSpentAt(request.getSpentAt());
+        }
+        if (request.getLocation() != null) {
+            expense.setLocation(request.getLocation());
+        }
+
+        applyHoliday(expense);
+        return toResponse(expenseRepository.save(expense));
     }
 
     public List<ExpenseResponse> listRecentExpenses(int limit) {
@@ -119,6 +161,22 @@ public class ExpenseService {
         response.setCreatedAt(expense.getCreatedAt());
         response.setUpdatedAt(expense.getUpdatedAt());
         return response;
+    }
+
+    private void applyHoliday(Expense expense) {
+        if (expense.getSpentAt() == null) {
+            expense.setHoliday(false);
+            expense.setHolidayName(null);
+            return;
+        }
+        holidayService.findHoliday(expense.getSpentAt().toLocalDate())
+                .ifPresentOrElse(name -> {
+                    expense.setHoliday(true);
+                    expense.setHolidayName(name);
+                }, () -> {
+                    expense.setHoliday(false);
+                    expense.setHolidayName(null);
+                });
     }
 
     private int clampLimit(int limit) {

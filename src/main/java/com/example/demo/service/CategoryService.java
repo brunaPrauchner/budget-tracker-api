@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.dto.CategoryRequest;
 import com.example.demo.dto.CategoryResponse;
+import com.example.demo.dto.CategoryPatchRequest;
 import com.example.demo.model.Category;
 import com.example.demo.repository.CategoryRepository;
 import com.example.demo.repository.ExpenseRepository;
@@ -37,6 +38,37 @@ public class CategoryService {
 
         Category saved = categoryRepository.save(category);
         return toResponse(saved);
+    }
+
+    @Transactional
+    public CategoryResponse updateCategory(UUID id, CategoryRequest request) {
+        Category category = getCategory(id);
+        if (!category.getName().equalsIgnoreCase(request.getName())
+                && categoryRepository.existsByNameIgnoreCase(request.getName())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Category name already exists");
+        }
+        category.setName(request.getName());
+        category.setMonthlyBudgetLimit(request.getMonthlyBudgetLimit());
+        return toResponse(categoryRepository.save(category));
+    }
+
+    @Transactional
+    public CategoryResponse patchCategory(UUID id, CategoryPatchRequest request) {
+        if (request.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No fields to update");
+        }
+        Category category = getCategory(id);
+        if (request.getName() != null) {
+            if (!category.getName().equalsIgnoreCase(request.getName())
+                    && categoryRepository.existsByNameIgnoreCase(request.getName())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Category name already exists");
+            }
+            category.setName(request.getName());
+        }
+        if (request.getMonthlyBudgetLimit() != null) {
+            category.setMonthlyBudgetLimit(request.getMonthlyBudgetLimit());
+        }
+        return toResponse(categoryRepository.save(category));
     }
 
     public List<CategoryResponse> listCategories() {
