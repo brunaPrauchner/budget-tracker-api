@@ -61,13 +61,13 @@ Notes:
 
 ## Architecture
 - DB schema: see `docs/images/db-diagram.png` (categories, expenses, app_users).
-- Layered overview: see `docs/images/layered-architecture.png` (controllers → security/services → repositories/DB + external Calendarific API).
-- createCategory flow: see `docs/images/create-category-flow.png`.
+- Layered overview: see `docs/images/layer-diagram.png` (controllers → security/services → repositories/DB + external Calendarific API).
+- createCategory flow: see `docs/images/workflow-diagram.png`.
 
 > Place the images at the paths above so the links render in Markdown:
 > ```
 > docs/images/db-diagram.png
-> docs/images/layered-architecture.png
-> docs/images/create-category-flow.png
+> docs/images/layer-diagram.png
+> docs/images/workflow-diagram.png
 > ```
 > Adjust paths if you prefer a different folder.
