@@ -54,7 +54,20 @@ calendarific.base-url=https://calendarific.com/api/v2
 
 ## Tests and Coverage
 - Run tests: `mvn test`
-- Coverage report: `target/site/jacoco/index.html`
+- Coverage report: `target/site/jacoco/index.html` (current: ~80%)
 
 Notes:
 - Integration tests use PATCH; the test suite configures `TestRestTemplate` with Apache HttpClient 5 (added as a dependency) to support PATCH requests.
+
+## Architecture
+- DB schema: see `docs/images/db-diagram.png` (categories, expenses, app_users).
+- Layered overview: see `docs/images/layer-diagram.png` (controllers → security/services → repositories/DB + external Calendarific API).
+- createCategory flow: see `docs/images/workflow-diagram.png`.
+
+> Place the images at the paths above so the links render in Markdown:
+> ```
+> docs/images/db-diagram.png
+> docs/images/layer-diagram.png
+> docs/images/workflow-diagram.png
+> ```
+> Adjust paths if you prefer a different folder.
