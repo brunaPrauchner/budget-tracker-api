@@ -10,6 +10,8 @@ services:
       SPRING_DATASOURCE_USERNAME: budget_user
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_JPA_PROPERTIES_HIBERNATE_JDBC_TIME_ZONE: UTC
+      JWT_SECRET: ${JWT_SECRET}
+      CALENDARIFIC_API_KEY: ${CALENDARIFIC_API_KEY}
     depends_on:
       db:
         condition: service_healthy
