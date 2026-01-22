@@ -14,6 +14,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -43,6 +44,7 @@ class IntegrationTest {
 
     @BeforeEach
     void clean() {
+        restTemplate.getRestTemplate().setRequestFactory(new HttpComponentsClientHttpRequestFactory());
         expenseRepository.deleteAll();
         categoryRepository.deleteAll();
         when(holidayService.findHoliday(any())).thenReturn(java.util.Optional.of("Test Holiday"));
@@ -280,6 +282,137 @@ class IntegrationTest {
                 "/api/expenses/" + unknown,
                 HttpMethod.DELETE,
                 HttpEntity.EMPTY,
+                Map.class);
+
+        assertEquals(HttpStatus.NOT_FOUND, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertEquals("Expense not found", resp.getBody().get("message"));
+    }
+
+    @Test
+    void updateCategory_put() {
+        ResponseEntity<CategoryDto> createResp = restTemplate.postForEntity(
+                "/api/categories",
+                Map.of("name", "PutCat-" + UUID.randomUUID(), "monthlyBudgetLimit", 50),
+                CategoryDto.class);
+        UUID id = createResp.getBody().id;
+
+        ResponseEntity<CategoryDto> putResp = restTemplate.exchange(
+                "/api/categories/" + id,
+                HttpMethod.PUT,
+                new HttpEntity<>(Map.of("name", "UpdatedName", "monthlyBudgetLimit", 50)),
+                CategoryDto.class);
+        assertEquals(HttpStatus.OK, putResp.getStatusCode());
+        assertEquals("UpdatedName", putResp.getBody().name);
+        assertEquals(new BigDecimal("50"), putResp.getBody().monthlyBudgetLimit);
+    }
+
+    @Test
+    void updateCategory_patch() {
+        ResponseEntity<CategoryDto> createResp = restTemplate.postForEntity(
+                "/api/categories",
+                Map.of("name", "PatchCat-" + UUID.randomUUID(), "monthlyBudgetLimit", 50),
+                CategoryDto.class);
+        UUID id = createResp.getBody().id;
+
+        ResponseEntity<CategoryDto> patchResp = restTemplate.exchange(
+                "/api/categories/" + id,
+                HttpMethod.PATCH,
+                new HttpEntity<>(Map.of("name", "PatchedName")),
+                CategoryDto.class);
+        assertEquals(HttpStatus.OK, patchResp.getStatusCode());
+        assertEquals("PatchedName", patchResp.getBody().name);
+        assertEquals(new BigDecimal("50.00"), patchResp.getBody().monthlyBudgetLimit);
+    }
+
+    @Test
+    void updateExpense_put() {
+        ResponseEntity<CategoryDto> catResp = restTemplate.postForEntity(
+                "/api/categories",
+                Map.of("name", "UpdateExpenseCat-" + UUID.randomUUID(), "monthlyBudgetLimit", 100),
+                CategoryDto.class);
+        UUID catId = catResp.getBody().id;
+        ResponseEntity<ExpenseDto> expResp = restTemplate.postForEntity(
+                "/api/expenses",
+                Map.of(
+                        "categoryId", catId,
+                        "name", "Orig",
+                        "amount", 10,
+                        "currency", "USD",
+                        "spentAt", OffsetDateTime.of(2025, 1, 1, 12, 0, 0, 0, ZoneOffset.UTC).toString()
+                ),
+                ExpenseDto.class);
+        UUID expId = expResp.getBody().id;
+
+        ResponseEntity<ExpenseDto> putResp = restTemplate.exchange(
+                "/api/expenses/" + expId,
+                HttpMethod.PUT,
+                new HttpEntity<>(Map.of(
+                        "categoryId", catId,
+                        "name", "Updated",
+                        "amount", 20,
+                        "currency", "USD",
+                        "spentAt", OffsetDateTime.of(2025, 2, 1, 12, 0, 0, 0, ZoneOffset.UTC).toString()
+                )),
+                ExpenseDto.class);
+        assertEquals(HttpStatus.OK, putResp.getStatusCode());
+        assertEquals("Updated", putResp.getBody().name);
+        assertEquals(new BigDecimal("20"), putResp.getBody().amount);
+    }
+
+    @Test
+    void updateExpense_patch() {
+        ResponseEntity<CategoryDto> catResp = restTemplate.postForEntity(
+                "/api/categories",
+                Map.of("name", "PatchExpenseCat-" + UUID.randomUUID(), "monthlyBudgetLimit", 100),
+                CategoryDto.class);
+        UUID catId = catResp.getBody().id;
+        ResponseEntity<ExpenseDto> expResp = restTemplate.postForEntity(
+                "/api/expenses",
+                Map.of(
+                        "categoryId", catId,
+                        "name", "Orig",
+                        "amount", 10,
+                        "currency", "USD",
+                        "spentAt", OffsetDateTime.of(2025, 1, 1, 12, 0, 0, 0, ZoneOffset.UTC).toString()
+                ),
+                ExpenseDto.class);
+        UUID expId = expResp.getBody().id;
+
+        ResponseEntity<ExpenseDto> patchResp = restTemplate.exchange(
+                "/api/expenses/" + expId,
+                HttpMethod.PATCH,
+                new HttpEntity<>(Map.of("location", "PatchedLoc")),
+                ExpenseDto.class);
+        assertEquals(HttpStatus.OK, patchResp.getStatusCode());
+        assertEquals("PatchedLoc", patchResp.getBody().location);
+        assertEquals("Orig", patchResp.getBody().name);
+        assertEquals(new BigDecimal("10.00"), patchResp.getBody().amount);
+    }
+
+    @Test
+    void updateCategory_unknownId_putReturnsNotFound() {
+        UUID unknown = UUID.randomUUID();
+
+        ResponseEntity<Map> resp = restTemplate.exchange(
+                "/api/categories/" + unknown,
+                HttpMethod.PUT,
+                new HttpEntity<>(Map.of("name", "Nope", "monthlyBudgetLimit", 10)),
+                Map.class);
+
+        assertEquals(HttpStatus.NOT_FOUND, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertEquals("Category not found", resp.getBody().get("message"));
+    }
+
+    @Test
+    void updateExpense_unknownId_patchReturnsNotFound() {
+        UUID unknown = UUID.randomUUID();
+
+        ResponseEntity<Map> resp = restTemplate.exchange(
+                "/api/expenses/" + unknown,
+                HttpMethod.PATCH,
+                new HttpEntity<>(Map.of("location", "Nowhere")),
                 Map.class);
 
         assertEquals(HttpStatus.NOT_FOUND, resp.getStatusCode());

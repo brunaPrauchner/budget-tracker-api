@@ -121,6 +121,43 @@ class CategoryServiceTest {
         assertEquals(409, ex.getStatusCode().value());
     }
 
+    @Test
+    void updateCategory_updatesFieldsAndChecksDuplication() {
+        CategoryResponse created = categoryService.createCategory(requestWithName("UpdateCat"));
+        CategoryResponse other = categoryService.createCategory(requestWithName("OtherCat"));
+
+        CategoryRequest update = new CategoryRequest();
+        update.setName("Renamed-" + System.nanoTime());
+        update.setMonthlyBudgetLimit(new BigDecimal("300.00"));
+
+        CategoryResponse updated = categoryService.updateCategory(created.getId(), update);
+        assertEquals(update.getName(), updated.getName());
+        assertEquals(update.getMonthlyBudgetLimit(), updated.getMonthlyBudgetLimit());
+
+        CategoryRequest conflict = new CategoryRequest();
+        conflict.setName(other.getName());
+        conflict.setMonthlyBudgetLimit(new BigDecimal("123.00"));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> categoryService.updateCategory(created.getId(), conflict));
+        assertEquals(409, ex.getStatusCode().value());
+    }
+
+    @Test
+    void patchCategory_updatesPartialOrRejectsEmpty() {
+        CategoryResponse created = categoryService.createCategory(requestWithName("PatchCat"));
+
+        // empty patch should fail
+        com.example.demo.dto.CategoryPatchRequest empty = new com.example.demo.dto.CategoryPatchRequest();
+        ResponseStatusException emptyEx = assertThrows(ResponseStatusException.class, () -> categoryService.patchCategory(created.getId(), empty));
+        assertEquals(400, emptyEx.getStatusCode().value());
+
+        com.example.demo.dto.CategoryPatchRequest patch = new com.example.demo.dto.CategoryPatchRequest();
+        patch.setName("Patched-" + System.nanoTime());
+
+        CategoryResponse patched = categoryService.patchCategory(created.getId(), patch);
+        assertEquals(patch.getName(), patched.getName());
+        assertEquals(created.getMonthlyBudgetLimit(), patched.getMonthlyBudgetLimit());
+    }
+
     private CategoryRequest requestWithName(String prefix) {
         CategoryRequest request = new CategoryRequest();
         request.setName(prefix + "-" + System.nanoTime());

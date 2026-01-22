@@ -180,6 +180,46 @@ class ExpenseServiceTest {
         assertEquals(404, ex.getStatusCode().value());
     }
 
+    @Test
+    void updateExpense_updatesAllFields() {
+        ExpenseResponse existing = createExpense(food.getId(), "Orig", new BigDecimal("10.00"), OffsetDateTime.now());
+        OffsetDateTime newDate = OffsetDateTime.of(2026, 1, 1, 10, 0, 0, 0, ZoneOffset.UTC);
+        ExpenseRequest update = new ExpenseRequest();
+        update.setCategoryId(transport.getId());
+        update.setName("Updated");
+        update.setAmount(new BigDecimal("20.00"));
+        update.setCurrency("usd");
+        update.setSpentAt(newDate);
+        update.setLocation("NewLoc");
+
+        ExpenseResponse updated = expenseService.updateExpense(existing.getId(), update);
+
+        assertEquals(transport.getId(), updated.getCategoryId());
+        assertEquals("Updated", updated.getName());
+        assertEquals(new BigDecimal("20.00"), updated.getAmount());
+        assertEquals("USD", updated.getCurrency());
+        assertEquals(newDate, updated.getSpentAt());
+        assertEquals("NewLoc", updated.getLocation());
+    }
+
+    @Test
+    void patchExpense_updatesSubsetOrRejectsEmpty() {
+        ExpenseResponse existing = createExpense(food.getId(), "Orig", new BigDecimal("10.00"), OffsetDateTime.now());
+
+        com.example.demo.dto.ExpensePatchRequest empty = new com.example.demo.dto.ExpensePatchRequest();
+        ResponseStatusException emptyEx = assertThrows(ResponseStatusException.class, () -> expenseService.patchExpense(existing.getId(), empty));
+        assertEquals(400, emptyEx.getStatusCode().value());
+
+        com.example.demo.dto.ExpensePatchRequest patch = new com.example.demo.dto.ExpensePatchRequest();
+        patch.setLocation("PatchedLoc");
+        patch.setAmount(new BigDecimal("15.00"));
+
+        ExpenseResponse patched = expenseService.patchExpense(existing.getId(), patch);
+        assertEquals("PatchedLoc", patched.getLocation());
+        assertEquals(new BigDecimal("15.00"), patched.getAmount());
+        assertEquals(existing.getName(), patched.getName());
+    }
+
     private Category createCategory(String name) {
         CategoryRequest request = new CategoryRequest();
         request.setName(name + "-" + UUID.randomUUID());

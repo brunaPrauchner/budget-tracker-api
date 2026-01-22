@@ -14,12 +14,21 @@ mvn spring-boot:run
 The default profile uses an in-memory H2 database (PostgreSQL mode) and exposes the H2 console at `/h2-console`.
 
 ## API
-- `POST /api/categories` - create a category `{ "name": "Food Out", "monthlyBudgetLimit": 250.00 }`
-- `GET /api/categories` - list categories
-- `POST /api/expenses` - log an expense `{ "categoryId": "<uuid>", "name": "Pizza", "amount": 18.50, "currency": "USD", "spentAt": "2024-12-03T18:00:00Z", "location": "Mario's" }`
-- `GET /api/expenses/recent?limit=10` - last N expenses (default 10)
-- `GET /api/categories/{categoryId}/expenses/recent?limit=5` - last N expenses for a category
-- `GET /api/summary/monthly?year=2024&month=12` - totals per category for the given month
+- Categories
+  - `POST /api/categories` - create `{ "name": "Food Out", "monthlyBudgetLimit": 250.00 }`
+  - `GET /api/categories` - list categories
+  - `PUT /api/categories/{id}` - full update (name, monthlyBudgetLimit)
+  - `PATCH /api/categories/{id}` - partial update of name and/or monthlyBudgetLimit
+  - `DELETE /api/categories/{id}` - delete (fails with 409 if it has expenses)
+- Expenses
+  - `POST /api/expenses` - log an expense `{ "categoryId": "<uuid>", "name": "Pizza", "amount": 18.50, "currency": "USD", "spentAt": "2024-12-03T18:00:00Z", "location": "Mario's" }`
+  - `PUT /api/expenses/{id}` - full update
+  - `PATCH /api/expenses/{id}` - partial update (categoryId, name, amount, currency, spentAt, location)
+  - `DELETE /api/expenses/{id}` - delete
+  - `GET /api/expenses/recent?limit=10` - last N expenses (default 10, max 100, clamps values)
+  - `GET /api/categories/{categoryId}/expenses/recent?limit=5` - last N expenses for a category
+- Summaries
+  - `GET /api/summary/monthly?year=2024&month=12` - totals per category for the given month
 
 Timestamps use OffsetDateTime (ISO 8601 with offset). Amounts are BigDecimal with a 3-letter ISO code.
 
@@ -35,3 +44,10 @@ calendarific.api-key=YOUR_KEY
 calendarific.country=US
 calendarific.base-url=https://calendarific.com/api/v2
 ```
+
+## Tests and Coverage
+- Run tests: `mvn test`
+- Coverage report: `target/site/jacoco/index.html`
+
+Notes:
+- Integration tests use PATCH; the test suite configures `TestRestTemplate` with Apache HttpClient 5 (added as a dependency) to support PATCH requests.
